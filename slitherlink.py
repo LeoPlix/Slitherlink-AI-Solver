@@ -28,27 +28,25 @@ ACTIVE = 1
 FORBIDDEN = 2
 
 
-class SlytherlinkState:
+class SlitherlinkState:
     state_id = 0
 
     def __init__(self, board):
         self.board = board
-        self.id = SlytherlinkState.state_id
-        SlytherlinkState.state_id += 1
+        self.id = SlitherlinkState.state_id
+        SlitherlinkState.state_id += 1
 
     def __lt__(self, other):
         return self.id < other.id
 
     def __eq__(self, other):
-        return isinstance(other, SlytherlinkState) and self.board.signature() == other.board.signature()
+        return isinstance(other, SlitherlinkState) and self.board.signature() == other.board.signature()
 
     def __hash__(self):
         return hash(self.board.signature())
 
 
 class Board:
-    """Internal representation of a Slitherlink board."""
-
     def __init__(self, hints, h_states=None, v_states=None):
         self.hints = [row[:] for row in hints]
         self.rows = len(self.hints)
@@ -92,7 +90,6 @@ class Board:
         return True
 
     def get_cell_edges(self, row: int, column: int) -> list:
-        """Return the four edges of the given cell."""
         return [
             ('h', row, column),
             ('v', row, column + 1),
@@ -101,7 +98,6 @@ class Board:
         ]
 
     def get_active_edges(self, row: int, column: int) -> int:
-        """Return the number of active edges in a cell."""
         return sum(self.edge_state(edge) == ACTIVE for edge in self.get_cell_edges(row, column))
 
     def edge_vertices(self, edge):
@@ -112,7 +108,6 @@ class Board:
 
     @staticmethod
     def parse_instance():
-        """Read a board from standard input and return a Board instance."""
         grid = []
         for line in stdin:
             row = line.strip().split()
@@ -144,7 +139,7 @@ class Board:
         )
 
 
-class Slytherlink(Problem):
+class Slitherlink(Problem):
     def __init__(self, board: Board, gui=None):
         self.gui = gui
         initial_board = board.copy()
@@ -152,7 +147,7 @@ class Slytherlink(Problem):
         self._propagate(initial_board)
         initial_board.sync_views()
         
-        self.initial = SlytherlinkState(initial_board)
+        self.initial = SlitherlinkState(initial_board)
         super().__init__(self.initial)
 
     def _cell_state(self, board, row, column):
@@ -183,7 +178,6 @@ class Slytherlink(Problem):
         while True:
             changed = False
 
-            # Regras das Células (Hints)
             for row in range(board.rows):
                 for column in range(board.cols):
                     hint, active, unknown_edges = self._cell_state(board, row, column)
@@ -202,32 +196,23 @@ class Slytherlink(Problem):
                             if not ok: return False
                             changed = changed or edge_changed
 
-            # Regras dos Vértices
             for row in range(board.rows + 1):
                 for column in range(board.cols + 1):
                     active, unknown_edges = self._vertex_state(board, row, column)
-                    
                     if active > 2:
                         return False
-                    
                     if active == 1 and len(unknown_edges) == 0:
                         return False
-                        
                     if active == 2:
-                        # Vértice cheio: o resto é proibido
                         for edge in unknown_edges:
                             ok, edge_changed = self._set_and_track(board, edge, FORBIDDEN)
                             if not ok: return False
                             changed = changed or edge_changed
-                            
                     elif active == 1 and len(unknown_edges) == 1:
-                        # Vértice com 1 linha e 1 opção: a opção tem de ser ativada
                         ok, edge_changed = self._set_and_track(board, unknown_edges[0], ACTIVE)
                         if not ok: return False
                         changed = changed or edge_changed
-                        
                     elif active == 0 and len(unknown_edges) == 1:
-                        # Vértice com 0 linhas e só 1 opção: a opção tem de ser proibida (não pode ficar com 1 linha no fim)
                         ok, edge_changed = self._set_and_track(board, unknown_edges[0], FORBIDDEN)
                         if not ok: return False
                         changed = changed or edge_changed
@@ -278,15 +263,15 @@ class Slytherlink(Problem):
         for comp in components:
             is_closed = all(len(adjacency[v]) == 2 for v in comp)
             if is_closed:
-                if len(active_edges) > len(comp): 
-                    return True 
-                
+                if len(active_edges) > len(comp):
+                    return True
+
                 for r in range(board.rows):
                     for c in range(board.cols):
                         hint = board.hints[r][c]
                         if hint > 0 and board.get_active_edges(r, c) < hint:
                             return True
-                
+
                 for r in range(board.rows + 1):
                     for c in range(board.cols):
                         if board.h_states[r][c] == UNKNOWN:
@@ -295,9 +280,8 @@ class Slytherlink(Problem):
                     for c in range(board.cols + 1):
                         if board.v_states[r][c] == UNKNOWN:
                             board.v_states[r][c] = FORBIDDEN
-                
                 board.sync_views()
-                return False 
+                return False
         return False
 
     def _select_edge(self, board):
@@ -328,7 +312,7 @@ class Slytherlink(Problem):
 
         return best_edge
 
-    def actions(self, state: SlytherlinkState):
+    def actions(self, state: SlitherlinkState):
         board = state.board
         edge = self._select_edge(board)
         if edge is None: return []
@@ -341,7 +325,7 @@ class Slytherlink(Problem):
                     valid_actions.append((edge[0], edge[1], edge[2], value))
         return valid_actions
 
-    def result(self, state: SlytherlinkState, action):
+    def result(self, state: SlitherlinkState, action):
         kind, row, column, value = action
         board = state.board.copy()
         
@@ -349,7 +333,7 @@ class Slytherlink(Problem):
         self._propagate(board)
         board.sync_views()
         
-        next_state = SlytherlinkState(board)
+        next_state = SlitherlinkState(board)
         if self.gui is not None:
             try:
                 self.gui.update_from_state(next_state.board)
@@ -357,7 +341,7 @@ class Slytherlink(Problem):
                 pass
         return next_state
 
-    def goal_test(self, state: SlytherlinkState):
+    def goal_test(self, state: SlitherlinkState):
         board = state.board
         if board.unknown_edge_count() != 0: return False
 
@@ -430,10 +414,10 @@ def _format_solution(board):
 if __name__ == "__main__":
     sys.setrecursionlimit(2000)
     board = Board.parse_instance()
-    problem = Slytherlink(board)
-    
+    problem = Slitherlink(board)
+
     goal_node = depth_first_tree_search(problem)
-    
+
     if goal_node is not None:
         print(_format_solution(goal_node.state.board))
         
