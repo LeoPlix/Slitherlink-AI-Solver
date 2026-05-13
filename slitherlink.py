@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-# slitherlink.py: Template para implementação do projeto de Inteligência Artificial 2025/2026.
-# Devem alterar as classes e funções neste ficheiro de acordo com as instruções do enunciado.
-# Além das funções e classes sugeridas, podem acrescentar outras que considerem pertinentes.
+# slitherlink.py: Template implementation for the Artificial Intelligence 2025/2026 project.
+# Update the classes and functions in this file according to the assignment instructions.
+# In addition to the suggested classes and functions, you may add others you find relevant.
 
-# Grupo 62:
+# Group 62:
 # 113396 Leonor Costa Guedes
 # 113402 Manuel Francisco Santos Ramos Soares
 
@@ -47,7 +47,7 @@ class SlitherlinkState:
 
 
 class Board:
-    """Representação interna de um tabuleiro de Slitherlink."""
+    """Internal representation of a Slitherlink board."""
 
     def __init__(self, hints, h_states=None, v_states=None):
         self.hints = [row[:] for row in hints]
@@ -95,7 +95,7 @@ class Board:
         return self.edge_state(edge) == UNKNOWN
 
     def adjacent_cell(self, cell: tuple) -> list:
-        """Devolve uma lista das células que fazem fronteira com a célula enviada no argumento."""
+        """Return the neighboring cells that share a side with the input cell."""
         row, column = cell
         cells = []
         if row > 0:
@@ -109,7 +109,7 @@ class Board:
         return cells
 
     def get_cell_edges(self, row: int, column: int) -> list:
-        """Devolve as arestas da célula enviada no argumento."""
+        """Return the four edges of the given cell."""
         return [
             ('h', row, column),
             ('v', row, column + 1),
@@ -118,7 +118,7 @@ class Board:
         ]
 
     def get_active_edges(self, row: int, column: int) -> int:
-        """Devolve o número de arestas ativas."""
+        """Return the number of active edges in a cell."""
         return sum(self.edge_state(edge) == ACTIVE for edge in self.get_cell_edges(row, column))
 
     def edge_vertices(self, edge):
@@ -129,7 +129,7 @@ class Board:
 
     @staticmethod
     def parse_instance():
-        """Lê o tabuleiro do standard input e retorna uma instância de Board."""
+        """Read a board from standard input and return a Board instance."""
         grid = []
         for line in stdin:
             row = line.strip().split()
@@ -168,7 +168,7 @@ class Board:
 
 class Slitherlink(Problem):
     def __init__(self, board: Board, gui=None):
-        """O construtor especifica o estado inicial."""
+        """Initialize the problem with its initial state."""
         self.gui = gui
         initial_board = board.copy()
         self.initial = SlitherlinkState(initial_board)
@@ -351,7 +351,7 @@ class Slitherlink(Problem):
         return SlitherlinkState(board)
 
     def actions(self, state: SlitherlinkState):
-        """Retorna uma lista de ações que podem ser executadas a partir do estado passado como argumento."""
+        """Return actions that can be executed from the given state."""
         board = state.board
         if not self._propagate(board.copy()):
             return []
@@ -369,7 +369,7 @@ class Slitherlink(Problem):
         return actions
 
     def result(self, state: SlitherlinkState, action):
-        """Retorna o estado resultante de executar a 'action' sobre 'state' passado como argumento."""
+        """Return the state resulting from applying an action to a state."""
         kind, row, column, value = action
         board = state.board.copy()
         if not board.set_edge_state((kind, row, column), value):
@@ -386,7 +386,7 @@ class Slitherlink(Problem):
         return next_state
 
     def goal_test(self, state: SlitherlinkState):
-        """Retorna True se e só se o estado passado como argumento é um estado objetivo."""
+        """Return True if and only if the given state is a goal state."""
         board = state.board
 
         for row in range(board.rows):
@@ -440,7 +440,7 @@ class Slitherlink(Problem):
         return len(visited_vertices) == len(adjacency)
 
     def h(self, node: Node):
-        """Função heurística utilizada para a procura A*."""
+        """Heuristic function used by A* search."""
         board = node.state.board
         penalty = board.unknown_edge_count()
         for row in range(board.rows):
