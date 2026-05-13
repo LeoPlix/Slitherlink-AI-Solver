@@ -128,13 +128,13 @@ class Board:
 
     def _vertex_edges(self, row, column):
         edges = []
-        if row > 0:
-            edges.append(('h', row - 1, column))
-        if row < self.rows:
-            edges.append(('h', row, column))
         if column > 0:
-            edges.append(('v', row, column - 1))
+            edges.append(('h', row, column - 1))
         if column < self.cols:
+            edges.append(('h', row, column))
+        if row > 0:
+            edges.append(('v', row - 1, column))
+        if row < self.rows:
             edges.append(('v', row, column))
         return edges
 
@@ -146,11 +146,9 @@ class Board:
 
 class Slytherlink(Problem):
     def __init__(self, board: Board, gui=None):
-        """Initialize the problem with its initial state."""
         self.gui = gui
         initial_board = board.copy()
         
-        # Garante que o estado inicial está totalmente propagado
         self._propagate(initial_board)
         initial_board.sync_views()
         
@@ -185,6 +183,7 @@ class Slytherlink(Problem):
         while True:
             changed = False
 
+            # Regras das Células (Hints)
             for row in range(board.rows):
                 for column in range(board.cols):
                     hint, active, unknown_edges = self._cell_state(board, row, column)
@@ -203,29 +202,35 @@ class Slytherlink(Problem):
                             if not ok: return False
                             changed = changed or edge_changed
 
+            # Regras dos Vértices
             for row in range(board.rows + 1):
                 for column in range(board.cols + 1):
                     active, unknown_edges = self._vertex_state(board, row, column)
+                    
                     if active > 2:
                         return False
+                    
                     if active == 1 and len(unknown_edges) == 0:
                         return False
-                    if active == 0 and len(unknown_edges) == 1:
-                        return False
+                        
                     if active == 2:
+                        # Vértice cheio: o resto é proibido
                         for edge in unknown_edges:
                             ok, edge_changed = self._set_and_track(board, edge, FORBIDDEN)
                             if not ok: return False
                             changed = changed or edge_changed
+                            
                     elif active == 1 and len(unknown_edges) == 1:
+                        # Vértice com 1 linha e 1 opção: a opção tem de ser ativada
                         ok, edge_changed = self._set_and_track(board, unknown_edges[0], ACTIVE)
                         if not ok: return False
                         changed = changed or edge_changed
-                    elif active == 0 and len(unknown_edges) == 2:
-                        for edge in unknown_edges:
-                            ok, edge_changed = self._set_and_track(board, edge, ACTIVE)
-                            if not ok: return False
-                            changed = changed or edge_changed
+                        
+                    elif active == 0 and len(unknown_edges) == 1:
+                        # Vértice com 0 linhas e só 1 opção: a opção tem de ser proibida (não pode ficar com 1 linha no fim)
+                        ok, edge_changed = self._set_and_track(board, unknown_edges[0], FORBIDDEN)
+                        if not ok: return False
+                        changed = changed or edge_changed
 
             board.sync_views()
             if self._has_closed_cycle(board):
@@ -266,28 +271,22 @@ class Slytherlink(Problem):
                     if n not in comp: stack.append(n)
             components.append(comp)
 
-        # Interseções inválidas (vértices com > 2 arestas ativas)
         for v, neighbors in adjacency.items():
             if len(neighbors) > 2:
                 return True
 
-        # Verifica componentes cíclicos
         for comp in components:
             is_closed = all(len(adjacency[v]) == 2 for v in comp)
             if is_closed:
-                # O ciclo fechou. É este o ciclo final?
                 if len(active_edges) > len(comp): 
-                    return True # Não, tem pedaços ativos a mais
+                    return True 
                 
-                # Valida se ainda existem hints por cumprir
                 for r in range(board.rows):
                     for c in range(board.cols):
                         hint = board.hints[r][c]
                         if hint > 0 and board.get_active_edges(r, c) < hint:
                             return True
                 
-                # Se não há mais arestas ativas nem obrigações, o puzzle está resolvido!
-                # Marca o restante do tabuleiro como FORBIDDEN.
                 for r in range(board.rows + 1):
                     for c in range(board.cols):
                         if board.h_states[r][c] == UNKNOWN:
@@ -298,7 +297,7 @@ class Slytherlink(Problem):
                             board.v_states[r][c] = FORBIDDEN
                 
                 board.sync_views()
-                return False # Não é um ciclo prematuro, é a solução final.
+                return False 
         return False
 
     def _select_edge(self, board):
@@ -330,7 +329,6 @@ class Slytherlink(Problem):
         return best_edge
 
     def actions(self, state: SlytherlinkState):
-        """Return actions that can be executed from the given state."""
         board = state.board
         edge = self._select_edge(board)
         if edge is None: return []
@@ -344,11 +342,9 @@ class Slytherlink(Problem):
         return valid_actions
 
     def result(self, state: SlytherlinkState, action):
-        """Return the state resulting from applying an action to a state."""
         kind, row, column, value = action
         board = state.board.copy()
         
-        # Estas chamadas já foram pré-validadas em actions() e não darão erro
         board.set_edge_state((kind, row, column), value)
         self._propagate(board)
         board.sync_views()
@@ -362,7 +358,6 @@ class Slytherlink(Problem):
         return next_state
 
     def goal_test(self, state: SlytherlinkState):
-        """Return True if and only if the given state is a goal state."""
         board = state.board
         if board.unknown_edge_count() != 0: return False
 
@@ -377,7 +372,6 @@ class Slytherlink(Problem):
                 active = sum(board.edge_state(edge) == ACTIVE for edge in board._vertex_edges(row, column))
                 if active not in (0, 2): return False
 
-        # Verifica componente gráfica (ciclo único)
         active_edges = []
         for row in range(board.rows + 1):
             for column in range(board.cols):
@@ -407,7 +401,6 @@ class Slytherlink(Problem):
         return len(visited) == len(adjacency)
 
     def h(self, node: Node):
-        """Heuristic function used by A* search."""
         board = node.state.board
         penalty = board.unknown_edge_count()
         for row in range(board.rows):
@@ -430,7 +423,6 @@ def _format_solution(board):
             bottom = 1 if board.h_states[row + 1][column] == ACTIVE else 0
             left = 1 if board.v_states[row][column] == ACTIVE else 0
             current.append(f"{top}{right}{bottom}{left}")
-        # A formatação típica é com tabs, o que se enquadra nos outputs de teste
         rows.append("\t".join(current))
     return "\n".join(rows)
 
@@ -440,8 +432,8 @@ if __name__ == "__main__":
     board = Board.parse_instance()
     problem = Slytherlink(board)
     
-    # Resolvido utilizando uma procura do search.py tal como requisitado
     goal_node = depth_first_tree_search(problem)
     
     if goal_node is not None:
         print(_format_solution(goal_node.state.board))
+        
