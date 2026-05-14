@@ -1,7 +1,7 @@
 #!/usr/bin/python3
-# slitherlink.py: Template implementation for the Artificial Intelligence 2025/2026 project.
-# Update the classes and functions in this file according to the assignment instructions.
-# In addition to the suggested classes and functions, you may add others you find relevant.
+# slitherlink.py: Template para implementação do projeto de Inteligência Artificial 2025/2026.
+# Devem alterar as classes e funções neste ficheiro de acordo com as instruções do enunciado.
+# Além das funções e classes sugeridas, podem acrescentar outras que considerem pertinentes.
 
 # Group 62:
 # 113396 Leonor Costa Guedes
@@ -420,4 +420,10 @@ if __name__ == "__main__":
 
     if goal_node is not None:
         print(_format_solution(goal_node.state.board))
-        
+
+
+
+
+
+
+
