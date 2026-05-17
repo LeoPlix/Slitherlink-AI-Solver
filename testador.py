@@ -1,5 +1,6 @@
 import os
 import subprocess
+import sys
 
 def correr_testes():
     pasta_testes = 'slitherlink-boards-public'
@@ -22,7 +23,7 @@ def correr_testes():
         # Executa o programa
         with open(caminho_txt, 'r') as f_in:
             resultado = subprocess.run(
-                ['python', 'slitherlink.py'], 
+                [sys.executable, 'slitherlink.py'], 
                 stdin=f_in, 
                 capture_output=True, 
                 text=True
