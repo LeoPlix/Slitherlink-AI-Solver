@@ -68,7 +68,7 @@ class Board:
         return tuple(tuple(row) for row in self.h_states), tuple(tuple(row) for row in self.v_states)
 
     def sync_views(self):
-        pass # Optional logic if external structures need updating
+        pass
 
     def edge_state(self, edge):
         kind, row, column = edge
@@ -122,16 +122,23 @@ class Board:
         for line in stdin:
             line = line.strip('\r\n')
             if not line: continue
-            row = line.split()
+            
+            if '\t' in line:
+                row = line.split('\t')
+            else:
+                row = line.split()
+                
             parsed_row = []
             for token in row:
-                if token.isdigit(): parsed_row.append(int(token))
-                else: parsed_row.append(-1)
+                token = token.strip()
+                if token.isdigit(): 
+                    parsed_row.append(int(token))
+                else: 
+                    parsed_row.append(-1)
             grid.append(parsed_row)
             
         if not grid: raise ValueError("Empty instance.")
         
-        # Pad caso a matriz venha incompleta
         max_cols = max(len(r) for r in grid)
         for r in grid:
             while len(r) < max_cols:
@@ -215,7 +222,6 @@ class Slitherlink(Problem):
 
             if not changed: break
             
-        # Avalia ciclos no final da propagação
         if self._has_closed_cycle(board): return False
         return True
 
@@ -236,7 +242,6 @@ class Slitherlink(Problem):
             adjacency.setdefault(a, []).append(b)
             adjacency.setdefault(b, []).append(a)
 
-        # Rejeita bifurcações instantaneamente
         for v, neighbors in adjacency.items():
             if len(neighbors) > 2: return True
 
@@ -258,19 +263,14 @@ class Slitherlink(Problem):
         for comp in components:
             is_closed = all(len(adjacency[v]) == 2 for v in comp)
             if is_closed:
-                # Se temos um ciclo fechado mas sobram arestas ativas fora dele -> Estado Inválido
                 if len(active_edges) > len(comp): return True
                 
-                # Validação final de estado
                 for r in range(board.rows):
                     for c in range(board.cols):
                         hint = board.hints[r][c]
-                        # Se há hint e este ciclo não a satisfaz por completo -> Estado Inválido
                         if hint >= 0 and board.get_active_edges(r, c) != hint: 
                             return True 
                 
-                # SE ESTAMOS AQUI: Encontramos O Único Ciclo Válido. Fast-Forward:
-                # Marcamos tudo o resto como proibido, resolvendo instantaneamente.
                 for r in range(board.rows + 1):
                     for c in range(board.cols):
                         if board.h_states[r][c] == UNKNOWN:
@@ -289,15 +289,12 @@ class Slitherlink(Problem):
 
         def get_edge_score(kind, row, column):
             score = 0
-            
-            # Prioridade Absoluta (MRV): Vértices soltos que precisam de continuidade
             v1, v2 = board.edge_vertices((kind, row, column))
             for v in (v1, v2):
                 active = sum(1 for e in board._vertex_edges(*v) if board.edge_state(e) == ACTIVE)
                 if active == 1:
                     score -= 1000 
             
-            # Prioridade Baseada nas "Hints" em Voltas
             cells = []
             if kind == 'h':
                 if row > 0: cells.append((row - 1, column))
@@ -362,9 +359,6 @@ class Slitherlink(Problem):
             board.is_valid = False
             
         next_state = SlitherlinkState(board)
-        if self.gui is not None:
-            try: self.gui.update_from_state(next_state.board)
-            except Exception: pass
         return next_state
 
     def goal_test(self, state: SlitherlinkState):
