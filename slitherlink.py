@@ -50,6 +50,7 @@ class Board:
         self.hints = [row[:] for row in hints]
         self.rows = len(self.hints)
         self.cols = len(self.hints[0]) if self.rows else 0
+        # h_states and v_states keep track of horizontal and vertical edge statuses
         self.h_states = h_states if h_states is not None else [[UNKNOWN] * self.cols for _ in range(self.rows + 1)]
         self.v_states = v_states if v_states is not None else [[UNKNOWN] * (self.cols + 1) for _ in range(self.rows)]
         self.is_valid = True
@@ -152,6 +153,7 @@ class Slitherlink(Problem):
         self.gui = gui
         initial_board = board.copy()
         
+        # Initial deterministic propagation before search starts
         if not self._propagate(initial_board):
             initial_board.is_valid = False
             
@@ -181,8 +183,11 @@ class Slitherlink(Problem):
         return True, True
 
     def _propagate(self, board):
+        # Fixed-point iteration loop for logical inference
         while True:
             changed = False
+
+            # First: Cell-based local constraints propagation
             for row in range(board.rows):
                 for column in range(board.cols):
                     hint, active, unknown_edges = self._cell_state(board, row, column)
@@ -200,6 +205,7 @@ class Slitherlink(Problem):
                             if not ok: return False
                             changed = changed or edge_changed
 
+            # Second: Vertex-based continuity constraints propagation
             for row in range(board.rows + 1):
                 for column in range(board.cols + 1):
                     active, unknown_edges = self._vertex_state(board, row, column)
@@ -221,7 +227,8 @@ class Slitherlink(Problem):
                         changed = changed or edge_changed
 
             if not changed: break
-            
+
+        # Prune invalid states containing premature closed loops   
         if self._has_closed_cycle(board): return False
         return True
 
@@ -245,6 +252,7 @@ class Slitherlink(Problem):
         for v, neighbors in adjacency.items():
             if len(neighbors) > 2: return True
 
+        # Connected components extraction to identify isolated loops
         visited = set()
         components = []
         for start in adjacency:
@@ -287,6 +295,7 @@ class Slitherlink(Problem):
         best_edge = None
         best_score = float('inf')
 
+        # Heuristic scoring to prioritize branching on the most constrained areas
         def get_edge_score(kind, row, column):
             score = 0
             v1, v2 = board.edge_vertices((kind, row, column))
@@ -353,6 +362,7 @@ class Slitherlink(Problem):
         kind, row, column, value = action
         board = state.board.copy()
         
+        # Applies branching decision and triggers recursive logical propagation
         if not board.set_edge_state((kind, row, column), value):
             board.is_valid = False
         elif not self._propagate(board):
@@ -406,6 +416,7 @@ class Slitherlink(Problem):
         return len(visited) == len(adjacency)
 
     def h(self, node: Node):
+        # Heuristic cost function evaluating state penalizations and hints alignment
         board = node.state.board
         penalty = board.unknown_edge_count()
         for row in range(board.rows):
@@ -438,6 +449,7 @@ if __name__ == "__main__":
     board = Board.parse_instance()
     problem = Slitherlink(board)
 
+    # Uses Depth-First Search strategy to locate the unique goal state efficiently
     goal_node = depth_first_tree_search(problem)
 
     if goal_node is not None:
